@@ -1,0 +1,5 @@
+node_modules/
+test/boot/.boot-tmp/
+*.log
+package.json.bak-*
+.DS_Store

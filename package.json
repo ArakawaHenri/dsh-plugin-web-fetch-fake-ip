@@ -1,0 +1,53 @@
+{
+  "name": "dsh-plugin-web-fetch-fake-ip",
+  "version": "0.1.0",
+  "description": "TUN/fake-IP aware web_fetch provider for DeepSeek Harness: admits the configured fake-IP CIDR (default 198.18.0.0/15) while keeping the shipped public-address check for every other destination, or cancels that check entirely (mode: off).",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArakawaHenri/dsh-plugin-web-fetch-fake-ip.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ArakawaHenri/dsh-plugin-web-fetch-fake-ip/issues"
+  },
+  "homepage": "https://github.com/ArakawaHenri/dsh-plugin-web-fetch-fake-ip#readme",
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "web-fetch",
+    "fake-ip",
+    "tun",
+    "clash",
+    "mihomo",
+    "ssrf"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./network": "./src/network.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --import ./test/loader.mjs --test test/*.test.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-web": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-web-fetch-http": ">=0.2.0-rc.1 <0.3.0"
+  }
+}
