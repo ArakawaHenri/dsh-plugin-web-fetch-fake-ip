@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-web-fetch-fake-ip",
   "version": "0.1.0",
-  "description": "TUN/fake-IP aware web_fetch provider for DeepSeek Harness: admits the configured fake-IP CIDR (default 198.18.0.0/15) while keeping the shipped public-address check for every other destination, or cancels that check entirely (mode: off).",
+  "description": "Fake-IP / TUN compatible web_fetch provider for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "repository": {

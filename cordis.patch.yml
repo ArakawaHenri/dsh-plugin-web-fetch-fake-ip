@@ -1,16 +1,3 @@
-# dsh-plugin-web-fetch-fake-ip — bundle patch layer.
-#
-# `web_fetch` refuses any URL whose DNS answer is not global unicast. A TUN
-# resolver in fake-IP mode answers *every* name from 198.18.0.0/15, which
-# ipaddr.js classifies as `reserved` rather than `unicast`, so the shipped
-# provider blocks the entire web with WEB_BLOCKED_URL.
-#
-# 1. Disable the shipped `http` provider row.
-# 2. Mount the replacement under the SAME provider id (`http`), so the `web`
-#    row's own selection (`fetchProvider: http`, written by the dsh-base layer)
-#    keeps working and no other row's config has to be restated here. A patch
-#    layer replaces a targeted row's whole `config`, so restating `web` would
-#    silently drop whatever else that row carries.
 - id: web-fetch-http
   disabled: true
 
@@ -18,17 +5,6 @@
     - id: web-fetch-fake-ip
       name: dsh-plugin-web-fetch-fake-ip
       config:
-        # fake-ip: admit the CIDRs below on top of everything the shipped check
-        #          already accepts; every other destination keeps the shipped
-        #          refusal (loopback, RFC 1918, link-local, CGNAT, metadata).
-        # off:     cancel the address check entirely — the harness will then also
-        #          fetch 127.0.0.1 and LAN hosts.
         mode: fake-ip
         allowCidrs:
           - 198.18.0.0/15
-        # providerId: http
-        # userAgent: 'deepseek-harness/0.0.1 (+https://github.com/deepseek-ai)'
-        # maxResponseBytes: 5000000
-        # maxBodyChars: 100000
-        # timeoutMs: 30000
-        # maxRedirects: 5

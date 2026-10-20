@@ -1,9 +1,3 @@
-/**
- * Test-only module resolution: the plugin's production code imports the
- * harness packages that only exist inside the dsh installation, so unit tests
- * redirect those two specifiers to local stubs with the same shape. The real
- * packages are exercised by the boot tests in the repository README.
- */
 import { registerHooks } from 'node:module'
 
 const STUBS = {
