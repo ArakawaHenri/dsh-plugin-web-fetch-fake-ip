@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-web-fetch-fake-ip",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fake-IP / TUN compatible web_fetch provider for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
