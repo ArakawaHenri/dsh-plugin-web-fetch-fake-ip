@@ -79,21 +79,23 @@ export function createFakeIpResolver({ mode, allowCidrs = [], validatePublic, lo
     const resolver = async (host, options) => {
       const answers = await lookupImpl(host, options)
       if (host !== bare) return answers // the shipped NAT64 discovery of ipv4only.arpa
+      if (mode === 'off') return answers
       raw = normalizeAnswers(hostname, answers)
-      return mode === 'fake-ip' && raw !== undefined
-        ? answers.filter((_, index) => !admits(raw[index]))
-        : answers
+      if (raw === undefined) return answers
+      // Hold the allowlisted answers back so the shipped check judges only the
+      // rest. When nothing remains, hand the full set back instead: the shipped
+      // check then refuses it with WEB_BLOCKED_URL, which the catch below
+      // recognizes without coupling to any error message text.
+      const remainder = raw.filter((entry) => !admits(entry))
+      return remainder.length > 0 ? remainder : raw
     }
 
     let validated
     try {
       validated = await validatePublic(hostname, signal, resolver)
     } catch (error) {
-      // Every answer was allowlisted, so the shipped check saw an empty set.
-      if (
-        raw !== undefined && raw.length > 0 && raw.every(admits) &&
-        error.code === 'WEB_PROVIDER_ERROR' && /no addresses/.test(error.message ?? '')
-      ) return raw
+      // The shipped check refused a set consisting entirely of allowlisted addresses.
+      if (raw !== undefined && raw.length > 0 && raw.every(admits)) return raw
       if (!isWebBlocked(error)) throw error
       if (mode === 'off' && raw !== undefined) return raw
       const family = isIP(bare)
