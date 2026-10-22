@@ -12,7 +12,7 @@ DeepSeek Harness 内置的 `web-fetch-http` 在发起请求前会解析域名，
 WEB_BLOCKED_URL: URL hostname "example.com" resolves to a non-public IP address
 ```
 
-本插件继承内置的 `HttpFetchProvider`，通过 `cordis.patch.yml` 停用默认的 `web-fetch-http` 并接管 `http` provider：当默认地址校验因 `WEB_BLOCKED_URL` 拒绝时，额外放行 `allowCidrs`（默认 `198.18.0.0/15`）内的地址，其余私有/保留地址（如 `127.0.0.1`、局域网、链路本地与云 metadata 地址）保持原有的拦截行为。
+本插件继承内置的 `HttpFetchProvider`，通过 `cordis.patch.yml` 停用默认的 `web-fetch-http` 并接管 `http` provider：利用内置校验器可注入 lookup 的扩展点，每次解析只做**一次** DNS 查询——`fake-ip` 模式下将命中 `allowCidrs` 的答案暂时扣下，其余地址交由内置校验原样判定（NAT64 探测不受影响）；内置校验整体放行时返回完整答案集，拒绝时只有全部答案都在放行列表内才放行。其余私有/保留地址（如 `127.0.0.1`、局域网、链路本地与云 metadata 地址）保持原有的拦截行为。
 
 ## 安装
 
@@ -26,13 +26,12 @@ dsh plugin --profile desktop add "file:$PWD"
 
 ## 配置
 
-默认配置位于插件的 `cordis.patch.yml`：
+默认配置位于插件的 `cordis.patch.yml`（配置经由 Schemastery `Config` 校验，插件提供中英文元数据）：
 
 | 字段 | 默认值 | 说明 |
 | --- | --- | --- |
 | `mode` | `'fake-ip'` | `'fake-ip'`：在默认公网校验之上放行 `allowCidrs`；`'off'`：跳过非公网地址拦截（允许访问 `127.0.0.1` 与内网） |
-| `allowCidrs` | `['198.18.0.0/15']` | `fake-ip` 模式下额外放行的 IPv4/IPv6 CIDR 列表 |
-| `providerId` | `'http'` | 注册到 `ctx.web` 的 provider ID |
+| `allowCidrs` | `['198.18.0.0/15']` | `fake-ip` 模式下额外放行的 IPv4/IPv6 CIDR 列表（启动时校验格式） |
 | `maxResponseBytes` | `5000000` | 单次响应最大字节数 |
 | `maxBodyChars` | `100000` | 解码后返回的最大字符数 |
 | `timeoutMs` | `30000` | 请求超时时间（毫秒） |

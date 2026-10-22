@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Fake-IP web fetch",
+    "description": "Let web_fetch work under TUN fake-IP DNS by admitting the configured fake-IP CIDRs; every other destination keeps the shipped public-address check."
+  }
+}

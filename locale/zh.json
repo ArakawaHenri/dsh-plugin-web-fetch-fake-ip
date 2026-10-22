@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Fake-IP 网页获取",
+    "description": "在 TUN fake-IP 环境下放行配置的 fake-IP 网段使 web_fetch 可用，其余地址仍走内置公网校验。"
+  }
+}

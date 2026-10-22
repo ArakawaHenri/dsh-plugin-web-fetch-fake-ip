@@ -2,9 +2,10 @@ import { lookup } from 'node:dns/promises'
 import { BlockList, isIP } from 'node:net'
 import { WebError } from '@deepseek-ai/dsh-web'
 
+/** The fake-IP range Clash/mihomo/sing-box hand out by default (RFC 2544). */
 export const DEFAULT_ALLOW_CIDRS = Object.freeze(['198.18.0.0/15'])
-export const MODES = Object.freeze(['fake-ip', 'off'])
 
+/** WHATWG `URL` keeps brackets around IPv6 hostnames; IP parsers do not. */
 export function stripIpv6Brackets(hostname) {
   return typeof hostname === 'string' && hostname.startsWith('[') && hostname.endsWith(']')
     ? hostname.slice(1, -1)
@@ -40,70 +41,69 @@ export function isWebBlocked(error) {
   return typeof error === 'object' && error !== null && error.code === 'WEB_BLOCKED_URL'
 }
 
-function raceWithSignal(promise, signal) {
-  const abortError = () => new Error('web fetch aborted during hostname resolution', { cause: signal?.reason })
-  if (signal?.aborted === true) return Promise.reject(abortError())
-  return new Promise((resolve, reject) => {
-    const abort = () => reject(abortError())
-    signal?.addEventListener('abort', abort, { once: true })
-    promise.then(resolve, reject).finally(() => signal?.removeEventListener('abort', abort))
-  })
-}
-
-export async function resolveRawAddresses(hostname, signal, lookupImpl = lookup) {
-  const bare = stripIpv6Brackets(hostname)
-  const literalFamily = isIP(bare)
-  const resolved = literalFamily === 0
-    ? await raceWithSignal(lookupImpl(bare, { all: true, order: 'verbatim' }), signal)
-    : [{ address: bare, family: literalFamily }]
-  if (!Array.isArray(resolved) || resolved.length === 0) {
-    throw new WebError(`hostname "${hostname}" resolved to no addresses`, 'WEB_PROVIDER_ERROR')
-  }
-  const addresses = []
-  for (const entry of resolved) {
+/** Normalize DNS answers to `{ address, family }` with numeric families, or `undefined` when empty. */
+function normalizeAnswers(hostname, answers) {
+  if (!Array.isArray(answers) || answers.length === 0) return undefined
+  return answers.map((entry) => {
     const family = typeof entry?.address === 'string' ? isIP(entry.address) : 0
     if (family !== 4 && family !== 6) {
       throw new WebError(`hostname "${hostname}" resolved to an invalid IP address`, 'WEB_PROVIDER_ERROR')
     }
-    addresses.push({ address: entry.address, family })
-  }
-  return addresses
+    return { address: entry.address, family }
+  })
 }
 
-export function createFakeIpResolver(options) {
-  const { mode, allowCidrs = [], validatePublic, lookup: lookupImpl = lookup } = options
-  if (!MODES.includes(mode)) {
-    throw new Error(`unknown mode ${JSON.stringify(mode)}; expected one of ${MODES.join(', ')}`)
+/**
+ * Wrap the shipped resolver so a hostname's DNS answers are seen exactly once.
+ *
+ * The shipped check (`resolvePublicAddresses`) accepts a lookup override as its
+ * third argument, so we intercept its single lookup: in `fake-ip` mode the
+ * allowlisted answers are held back and the rest is judged by the shipped check
+ * unchanged (NAT64 discovery included, since `ipv4only.arpa` passes through);
+ * in `off` mode nothing is held back and only the refusal is overridden.
+ */
+export function createFakeIpResolver({ mode, allowCidrs = [], validatePublic, lookup: lookupImpl = lookup }) {
+  if (mode !== 'fake-ip' && mode !== 'off') {
+    throw new Error(`unknown mode ${JSON.stringify(mode)}; expected 'fake-ip' or 'off'`)
   }
   if (typeof validatePublic !== 'function') {
     throw new Error('createFakeIpResolver requires validatePublic')
   }
   const allowList = buildAllowList(allowCidrs)
-
-  const isPublicAddress = async (entry, hostname, signal) => {
-    try {
-      await validatePublic(hostname, signal, async () => [entry])
-      return true
-    } catch (error) {
-      if (isWebBlocked(error)) return false
-      throw error
-    }
-  }
+  const admits = (entry) =>
+    mode === 'fake-ip' && allowList.check(entry.address, entry.family === 6 ? 'ipv6' : 'ipv4')
 
   return async function resolveAddresses(hostname, signal) {
-    try {
-      return await validatePublic(hostname, signal)
-    } catch (error) {
-      if (!isWebBlocked(error)) throw error
-      const raw = await resolveRawAddresses(hostname, signal, lookupImpl)
-      if (mode === 'off') return raw
-      for (const entry of raw) {
-        const type = entry.family === 6 ? 'ipv6' : 'ipv4'
-        if (!allowList.check(entry.address, type) && !(await isPublicAddress(entry, hostname, signal))) {
-          throw error
-        }
-      }
-      return raw
+    const bare = stripIpv6Brackets(hostname)
+    let raw
+    const resolver = async (host, options) => {
+      const answers = await lookupImpl(host, options)
+      if (host !== bare) return answers // the shipped NAT64 discovery of ipv4only.arpa
+      raw = normalizeAnswers(hostname, answers)
+      return mode === 'fake-ip' && raw !== undefined
+        ? answers.filter((_, index) => !admits(raw[index]))
+        : answers
     }
+
+    let validated
+    try {
+      validated = await validatePublic(hostname, signal, resolver)
+    } catch (error) {
+      // Every answer was allowlisted, so the shipped check saw an empty set.
+      if (
+        raw !== undefined && raw.length > 0 && raw.every(admits) &&
+        error.code === 'WEB_PROVIDER_ERROR' && /no addresses/.test(error.message ?? '')
+      ) return raw
+      if (!isWebBlocked(error)) throw error
+      if (mode === 'off' && raw !== undefined) return raw
+      const family = isIP(bare)
+      if (family !== 0) {
+        const literal = { address: bare, family }
+        if (mode === 'off' || admits(literal)) return [literal]
+      }
+      throw error
+    }
+    // A mixed answer set: the shipped check passed the non-allowlisted remainder.
+    return raw ?? validated
   }
 }

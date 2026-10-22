@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-web-fetch-fake-ip",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fake-IP / TUN compatible web_fetch provider for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -31,10 +31,12 @@
   "exports": {
     ".": "./src/index.js",
     "./network": "./src/network.js",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
     "src/",
+    "locale/*.json",
     "cordis.patch.yml",
     "README.md"
   ],
@@ -48,6 +50,10 @@
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-web": ">=0.2.0-rc.1 <0.3.0",
-    "@deepseek-ai/dsh-web-fetch-http": ">=0.2.0-rc.1 <0.3.0"
+    "@deepseek-ai/dsh-web-fetch-http": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/schemastery": "~3.18.5"
+  },
+  "devDependencies": {
+    "@deepseek-ai/schemastery": "~3.18.5"
   }
 }
