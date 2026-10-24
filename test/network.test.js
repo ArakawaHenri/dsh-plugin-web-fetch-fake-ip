@@ -122,15 +122,21 @@ test('fake-ip mode admits an allowlisted IP literal without any lookup', async (
   assert.deepEqual(calls, [])
 })
 
-test('off mode admits non-public answers with a single lookup', async () => {
-  const { calls, lookup, validatePublic } = fixture({ answers: { 'localhost.test': [{ address: '127.0.0.1', family: 4 }] } })
-  const resolve = createFakeIpResolver({ mode: 'off', allowCidrs: [], validatePublic, lookup })
-  assert.deepEqual(await resolve('localhost.test', undefined), [{ address: '127.0.0.1', family: 4 }])
-  assert.deepEqual(calls, ['localhost.test'])
-})
+for (const address of ['127.0.0.1', '10.0.0.5', '::1']) {
+  test(`off mode admits a hostname resolving to ${address} with a single lookup`, async () => {
+    const answers = [{ address, family: isIP(address) }]
+    const { calls, lookup, validatePublic } = fixture({
+      answers: { 'private.test': answers },
+      nonPublic: [address]
+    })
+    const resolve = createFakeIpResolver({ mode: 'off', allowCidrs: [], validatePublic, lookup })
+    assert.deepEqual(await resolve('private.test', undefined), answers)
+    assert.deepEqual(calls, ['private.test'])
+  })
+}
 
 test('off mode admits non-public IP literals without any lookup', async () => {
-  const { calls, lookup, validatePublic } = fixture()
+  const { calls, lookup, validatePublic } = fixture({ nonPublic: ['::1'] })
   const resolve = createFakeIpResolver({ mode: 'off', allowCidrs: [], validatePublic, lookup })
   assert.deepEqual(await resolve('[::1]', undefined), [{ address: '::1', family: 6 }])
   assert.deepEqual(calls, [])

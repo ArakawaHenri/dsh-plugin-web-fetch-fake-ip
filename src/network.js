@@ -79,9 +79,8 @@ export function createFakeIpResolver({ mode, allowCidrs = [], validatePublic, lo
     const resolver = async (host, options) => {
       const answers = await lookupImpl(host, options)
       if (host !== bare) return answers // the shipped NAT64 discovery of ipv4only.arpa
-      if (mode === 'off') return answers
       raw = normalizeAnswers(hostname, answers)
-      if (raw === undefined) return answers
+      if (mode === 'off' || raw === undefined) return answers
       // Hold the allowlisted answers back so the shipped check judges only the
       // rest. When nothing remains, hand the full set back instead: the shipped
       // check then refuses it with WEB_BLOCKED_URL, which the catch below
