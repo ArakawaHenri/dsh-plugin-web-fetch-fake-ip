@@ -4,7 +4,7 @@ import { DEFAULT_USER_AGENT, SHIPPED_DEFAULT_RESOLVER } from '@deepseek-ai/dsh-w
 import { Config, FakeIpHttpFetchProvider, apply, inject, name } from '../src/index.js'
 
 test('plugin exports expected Cordis metadata', () => {
-  assert.equal(name, 'web-fetch-fake-ip')
+  assert.equal(name, 'dsh-plus-web-fetch-fake-ip')
   assert.deepEqual(inject, ['web'])
 })
 

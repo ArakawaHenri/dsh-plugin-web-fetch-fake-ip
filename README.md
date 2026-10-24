@@ -1,47 +1,48 @@
-# dsh-plugin-web-fetch-fake-ip
+# DSH Plus · Fake-IP 抓取
 
-让 DeepSeek Harness 的 `web_fetch` 在 Clash / mihomo / sing-box 等 TUN fake-IP 环境下正常工作。
+让 web_fetch 在 Clash / mihomo / sing-box 等 TUN fake-IP 环境下正常工作。
 
-## 背景
-
-DeepSeek Harness 内置的 `web-fetch-http` 在发起请求前会解析域名，并用 `ipaddr.js` 校验返回的地址是否为公网单播（`unicast`）。
-
-开启 TUN fake-IP 时，本地 DNS 会将域名解析到 `198.18.0.0/15`（RFC 2544 基准测试网段）。`ipaddr.js` 将该网段归类为 `reserved` 而非 `unicast`，导致所有 `web_fetch` 请求报错：
-
-```text
-WEB_BLOCKED_URL: URL hostname "example.com" resolves to a non-public IP address
-```
-
-本插件继承内置的 `HttpFetchProvider`，通过 `cordis.patch.yml` 停用默认的 `web-fetch-http` 并接管 `http` provider：利用内置校验器可注入 lookup 的扩展点，每次解析只做**一次** DNS 查询——`fake-ip` 模式下将命中 `allowCidrs` 的答案暂时扣下，其余地址交由内置校验原样判定（NAT64 探测不受影响）；内置校验整体放行时返回完整答案集，拒绝时只有全部答案都在放行列表内才放行。其余私有/保留地址（如 `127.0.0.1`、局域网、链路本地与云 metadata 地址）保持原有的拦截行为。
+这是 [DSH Plus](https://github.com/ArakawaHenri/dsh-plus) 系列的独立组件，包名为 `dsh-plus-web-fetch-fake-ip`。
 
 ## 安装
 
-在 DeepSeek Harness **设置 → 插件** 中填入本仓库的本地路径（如 `file:/path/to/dsh-plugin-web-fetch-fake-ip`）或包名进行安装，安装后重启应用生效。
+在 DSH 插件管理器中安装本仓库：
 
-也可以通过 CLI 安装：
-
-```bash
-dsh plugin --profile desktop add "file:$PWD"
+```text
+https://github.com/ArakawaHenri/dsh-plus-web-fetch-fake-ip
 ```
+
+也可以安装总包 `https://github.com/ArakawaHenri/dsh-plus`，一次启用全系列。
+安装后按 DSH 的提示重启或刷新页面。
+
+## 功能
+
+TUN fake-IP DNS 常把域名解析到 `198.18.0.0/15`。这个保留网段会被 DSH 的原生公网校验拦截，
+产生 `WEB_BLOCKED_URL`。本插件继承原生 `HttpFetchProvider`，停用默认实现并接管 `http` provider。
+
+每个目标域名只进行一次 DNS 查询。默认 `fake-ip` 模式额外放行配置的 CIDR，
+其余答案继续交给原生校验器，NAT64 探测保持原样。
+回环、局域网和其他未放行的保留地址仍受原生校验约束。
+
+`off` 模式允许访问回环和内网地址，适用于明确需要抓取本地服务的场景。
+IP 字面量和域名解析结果均可使用。
 
 ## 配置
 
-默认配置位于插件的 `cordis.patch.yml`（配置经由 Schemastery `Config` 校验，插件提供中英文元数据）：
-
 | 字段 | 默认值 | 说明 |
 | --- | --- | --- |
-| `mode` | `'fake-ip'` | `'fake-ip'`：在默认公网校验之上放行 `allowCidrs`；`'off'`：跳过非公网地址拦截（允许访问 `127.0.0.1` 与内网） |
-| `allowCidrs` | `['198.18.0.0/15']` | `fake-ip` 模式下额外放行的 IPv4/IPv6 CIDR 列表（启动时校验格式） |
+| `mode` | `fake-ip` | `fake-ip` 额外放行 CIDR；`off` 跳过非公网地址拦截 |
+| `allowCidrs` | `['198.18.0.0/15']` | 额外放行的 IPv4/IPv6 CIDR |
 | `maxResponseBytes` | `5000000` | 单次响应最大字节数 |
-| `maxBodyChars` | `100000` | 解码后返回的最大字符数 |
-| `timeoutMs` | `30000` | 请求超时时间（毫秒） |
+| `maxBodyChars` | `100000` | 返回内容最大字符数 |
+| `timeoutMs` | `30000` | 请求超时，毫秒 |
 | `maxRedirects` | `5` | 同源重定向最大次数 |
-| `userAgent` | 内置默认 UA | 请求 `User-Agent` |
+| `userAgent` | 原生默认 UA | 请求 User-Agent |
 
-如需自定义（例如自定义 fake-IP 网段、启用 IPv6 fake-IP `fc00::/18`，或切换为 `off` 模式），可在 profile 的 `cordis.patch.yml`（如 `~/.dsh/profiles/desktop/cordis.patch.yml`）中覆盖：
+在 profile 的 `cordis.patch.yml` 中覆盖：
 
 ```yaml
-- id: web-fetch-fake-ip
+- id: dsh-plus-web-fetch-fake-ip
   config:
     mode: fake-ip
     allowCidrs:
@@ -49,12 +50,23 @@ dsh plugin --profile desktop add "file:$PWD"
       - fc00::/18
 ```
 
-## 测试
+## 兼容性
 
-```bash
+需要 Node.js `>=20`，依赖 DSH 的 `dsh-web` 和 `dsh-web-fetch-http`，
+当前声明范围为 `>=0.2.0-rc.1 <0.3.0`。地址解析器需要保留原生 lookup 注入接口。
+
+## 开发
+
+```sh
+npm ci
+npm run check
 npm test
 ```
 
-## License
+直接编辑 JavaScript 源码，无需构建。
 
-MIT
+本地开发可通过插件管理器安装 `link:/absolute/path/to/dsh-plus/plugins/web-fetch-fake-ip`。
+
+## 许可
+
+MIT。插件图标使用 DSH Plus 系列的 36 × 36 透明 SVG，参考 DSH 原生插件的蓝绿配色。

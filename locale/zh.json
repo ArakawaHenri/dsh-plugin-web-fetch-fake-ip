@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Fake-IP 网页获取",
-    "description": "在 TUN fake-IP 环境下放行配置的 fake-IP 网段使 web_fetch 可用，其余地址仍走内置公网校验。"
+    "title": "DSH Plus · Fake-IP 抓取",
+    "description": "让 web_fetch 兼容 TUN fake-IP DNS，并保留原生地址校验。"
   }
 }

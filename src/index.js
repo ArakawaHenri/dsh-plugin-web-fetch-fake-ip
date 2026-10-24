@@ -2,7 +2,7 @@ import Schema from '@deepseek-ai/schemastery'
 import { DEFAULT_USER_AGENT, HttpFetchProvider } from '@deepseek-ai/dsh-web-fetch-http'
 import { DEFAULT_ALLOW_CIDRS, createFakeIpResolver, parseCidr } from './network.js'
 
-export const name = 'web-fetch-fake-ip'
+export const name = 'dsh-plus-web-fetch-fake-ip'
 export const inject = ['web']
 
 export const Config = Schema.object({

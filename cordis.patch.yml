@@ -2,8 +2,8 @@
   disabled: true
 
 - insert:
-    - id: web-fetch-fake-ip
-      name: dsh-plugin-web-fetch-fake-ip
+    - id: dsh-plus-web-fetch-fake-ip
+      name: dsh-plus-web-fetch-fake-ip
       config:
         mode: fake-ip
         allowCidrs:
